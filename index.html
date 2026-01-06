@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link Tracking</title>
+</head>
+<body>
+
+<script>
+  const TARGET = 'https://vt.tiktok.com/ZS5mdo5wj/';
+  const ENDPOINT = 'https://script.google.com/macros/library/d/1JvwqKj_MImPwp1hck9gUZ73No2Q7zE6mi_NePSPr_TyVo3bMv-XbMEoN/1';
+
+  const isAdmin = new URLSearchParams(location.search).get('admin') === '1';
+  const device = /Mobi/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop';
+
+  async function geo() {
+    const r = await fetch('https://ipapi.co/json/');
+    return r.json();
+  }
+
+  async function logVisit() {
+    const g = await geo();
+    await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'log',
+        payload: {
+          time: new Date().toISOString(),
+          ip: g.ip,
+          country: g.country_name,
+          city: g.city,
+          device,
+          ua: navigator.userAgent
+        }
+      })
+    });
+  }
+
+  async function dashboard() {
+    const r = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'stats' })
+    });
+    const d = await r.json();
+    document.body.innerHTML = `
+      <h2>Dashboard</h2>
+      <p>Total Visit: <b>${d.total}</b></p>
+      <table border="1" cellpadding="6">
+        <tr><th>Time</th><th>IP</th><th>Country</th><th>City</th><th>Device</th></tr>
+        ${d.logs.map(x =>
+          `<tr><td>${x.time}</td><td>${x.ip}</td><td>${x.country}</td><td>${x.city}</td><td>${x.device}</td></tr>`
+        ).join('')}
+      </table>
+    `;
+  }
+
+  (async () => {
+    if (isAdmin) {
+      await dashboard();
+    } else {
+      try { await logVisit(); } catch(e){}
+      location.href = TARGET;
+    }
+  })();
+</script>
+
+</body>
+</html>
